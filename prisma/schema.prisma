@@ -1,0 +1,135 @@
+// prisma/schema.prisma
+// RegistreNatal — Schéma de base de données
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // url       = env("DATABASE_URL")       // URL Neon DB (pooled)
+  // directUrl = env("DIRECT_DATABASE_URL") // URL directe pour les migrations
+}
+
+// ─────────────────────────────────────────
+// ENUM : Rôles utilisateurs
+// ─────────────────────────────────────────
+enum Role {
+  CITOYEN
+  OFFICIER
+  ADMIN
+}
+
+// ─────────────────────────────────────────
+// ENUM : Statuts d'une déclaration
+// ─────────────────────────────────────────
+enum StatutDeclaration {
+  EN_ATTENTE   // Soumise, pas encore traitée
+  VALIDEE      // Approuvée par un officier
+  REJETEE      // Rejetée avec motif
+}
+
+// ─────────────────────────────────────────
+// ENUM : Type d'extrait
+// ─────────────────────────────────────────
+enum TypeExtrait {
+  INTEGRALE          // Copie intégrale
+  AVEC_FILIATION     // Avec filiation
+  SANS_FILIATION     // Sans filiation
+}
+
+// ─────────────────────────────────────────
+// ENUM : Statut d'une demande d'extrait
+// ─────────────────────────────────────────
+enum StatutDemande {
+  EN_COURS     // En traitement
+  PRETE        // PDF généré, prêt à télécharger
+  DELIVREE     // Téléchargée par le citoyen
+}
+
+// ─────────────────────────────────────────
+// TABLE : Utilisateurs
+// Synchronisé avec Clerk (via webhook)
+// ─────────────────────────────────────────
+model User {
+  id          String   @id @default(cuid())
+  clerkId     String   @unique  // ID Clerk (ex: user_2abc...)
+  email       String?  @unique
+  telephone   String?
+  prenom      String
+  nom         String
+  role        Role     @default(CITOYEN)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  declarations   Declaration[] @relation("CitoyenDeclarations")
+  demandes       DemandeExtrait[]
+  validations    Declaration[] @relation("OfficierValidations")
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────
+// TABLE : Déclarations de naissance
+// ─────────────────────────────────────────
+model Declaration {
+  id              String           @id @default(cuid())
+  numeroActe      String?          @unique // Attribué après validation
+  statut          StatutDeclaration @default(EN_ATTENTE)
+
+  // Infos enfant
+  prenomEnfant    String
+  nomEnfant       String
+  dateNaissance   DateTime
+  lieuNaissance   String
+  sexe            String           // M ou F
+
+  // Infos père
+  prenomPere      String
+  nomPere         String
+  nationalitePere String?
+
+  // Infos mère
+  prenomMere      String
+  nomMere         String
+  nationaliteMere String?
+
+  // Traitement
+  motifRejet      String?          // Rempli si statut = REJETEE
+  dateValidation  DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  // Relations
+  citoyenId       String
+  citoyen         User             @relation("CitoyenDeclarations", fields: [citoyenId], references: [id])
+
+  officierIdValidateur String?
+  officierValidateur   User?       @relation("OfficierValidations", fields: [officierIdValidateur], references: [id])
+
+  demandes        DemandeExtrait[]
+
+  @@map("declarations")
+}
+
+// ─────────────────────────────────────────
+// TABLE : Demandes d'extraits
+// ─────────────────────────────────────────
+model DemandeExtrait {
+  id             String        @id @default(cuid())
+  type           TypeExtrait
+  statut         StatutDemande @default(EN_COURS)
+  pdfUrl         String?       // URL du PDF généré (Vercel Blob / S3)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Relations
+  declarationId  String
+  declaration    Declaration   @relation(fields: [declarationId], references: [id])
+
+  citoyenId      String
+  citoyen        User          @relation(fields: [citoyenId], references: [id])
+
+  @@map("demandes_extraits")
+}

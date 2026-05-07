@@ -27,7 +27,10 @@ export default function Hero() {
         </p>
 
         <div className="hero-actions">
-          <Link href="/demande" className="btn-primary">
+          <Link
+            href="/my-app/custom/components/landing/DocumentRequestForm.tsx"
+            className="btn-primary"
+          >
             Faire une demande
           </Link>
           <a href="#processus" className="btn-outline">

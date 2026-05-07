@@ -13,6 +13,7 @@ export default function Home() {
         <Features />
         <Roles />
       </main>
+
       <Footer />
     </>
   );
