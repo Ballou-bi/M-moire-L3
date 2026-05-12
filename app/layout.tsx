@@ -38,7 +38,7 @@ import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 
 export const metadata: Metadata = {
-  title: "RegistreNatal - Digitalisation des actes de naissance",
+  title: "waya - Digitalisation des actes de naissance",
   description:
     "Une plateforme moderne qui digitalise entièrement le processus de déclaration, de validation et de délivrance des extraits de naissance.",
 };
